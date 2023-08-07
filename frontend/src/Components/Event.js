@@ -16,23 +16,18 @@ const Events = () => {
   const [trackingPlan, setTrackingPlan] = useState({});
   const [eventFormShow, setEventFormShow] = useState(false);
 
-  const [selectedEvent, setSelectedEvent] = useState({});
-
   const [statusMessage, setStatusMessage] = useState("");
 
   const [eventSubmitErrors, seteventSubmitErrors] = useState({});
   const [trackingPlanFormStatus, setTrackingPlanFormStatus] = useState("");
 
-  const [eventsList, setAllEventsList] = useState([]); // State to hold the events list
+  const [eventsList, setAllEventsList] = useState([]);
   const [AllTrackingPlanList, setAllTrackingPlanList] = useState([]);
 
-  const [selectedDropEvent, setSelectedDropEvent] = useState(null);
-  const [selectedDropTrackingPlan, setSelectedDropTrackingPlan] =
-    useState(null);
-
-  const [addedEvents, setAddedEvents] = useState([]);
+  const [visibleEventList, setvisibleEventList] = useState([]);
   const trackingPlanNameRef = useRef(null);
   const [source, setSource] = useState("");
+  const [dropdownStatus, setDropdownStatus] = useState({});
 
   const handleEventChange = (key, value) => {
     setEvent({
@@ -60,67 +55,100 @@ const Events = () => {
       [key]: value,
     });
   };
-  // Handle the dropdown selection change
-  const handleEventDropdownChange = (selectedValue) => {
-    const eventToAdd = eventsList.find((event) => event.name === selectedValue);
-    setSelectedDropEvent(eventToAdd);
-  };
-
-  const handleTrackingDropdownChange = (selectedValue) => {
-    console.log("//++++" + selectedValue);
-    const trackingPlanToAdd = AllTrackingPlanList.find(
-      (plan) => plan.name === selectedValue
-    );
-
-    setSelectedDropTrackingPlan(trackingPlanToAdd);
-  };
 
   // Delete event handler
   const handleDeleteEvent = async (index) => {
-    const eventNameToDelete = addedEvents[index].name;
+    const eventNameToDelete = visibleEventList[index].name;
 
     const trackingPlanName = trackingPlan.name;
+    if (trackingPlanName) {
+      try {
+        await axios.delete(
+          `${baseURL}/trackingplan/${trackingPlanName}/remove/${eventNameToDelete}/`
+        );
 
-    try {
-      await axios.delete(
-        `${baseURL}/trackingplan/${trackingPlanName}/remove/${eventNameToDelete}/`
-      );
+        // Remove the deleted event from the local state
+        const updatedEvents = [...visibleEventList];
+        updatedEvents.splice(index, 1);
+        setvisibleEventList(updatedEvents);
 
-      // Remove the deleted event from the local state
-      const updatedEvents = [...addedEvents];
-      updatedEvents.splice(index, 1);
-      setAddedEvents(updatedEvents);
-
-      //Set a success message
-      alert(`Event ${eventNameToDelete} deleted successfully.`);
-    } catch (error) {
-      setStatusMessage(
-        `Error deleting event with ID ${eventNameToDelete}: ${error}`
-      );
-    }
-  };
-
-  const handleAddTrackingPlan = async () => {
-    let { success, data, error } = await DBService.fetchData(
-      `trackingplans/${selectedDropTrackingPlan.name}/`
-    );
-    if (success) {
-      setTrackingPlan(selectedDropTrackingPlan);
-      let temp = eventsList.filter((event) => data.events.includes(event.name));
-      setAddedEvents(temp);
+        //Set a success message
+        alert(`Event ${eventNameToDelete} deleted successfully.`);
+      } catch (error) {
+        setStatusMessage(`Failed while deleting event ${eventNameToDelete}`);
+      }
     } else {
-      console.error(
-        "An error occurred while fetching the tracking plan:",
-        error
-      );
+      const updatedEvents = [...visibleEventList];
+      updatedEvents.splice(index, 1);
+      setvisibleEventList(updatedEvents);
+      alert(`Event ${eventNameToDelete} deleted successfully.`);
     }
   };
 
-  const handleAddEvent = () => {
-    if (selectedEvent) {
-      setAddedEvents([...addedEvents, selectedDropEvent]);
-      setSelectedDropEvent(null); // Optional: Reset the selected event after adding;
+  const updateVisibleEventsList = (inputData) => {
+    let eventNameArray = inputData.events;
+    const fetchedEvents = eventNameArray
+      .map((eventName) => eventsList.find((event) => event.name === eventName))
+      .filter(Boolean); // Filters out any undefined items if an event name doesn't have a matching object
+
+    // Update the visibleEventList with these full event objects
+    setvisibleEventList(fetchedEvents);
+  };
+  const handleAddTrackingPlan = async (nameSelectTrackingPlan) => {
+    let message = "";
+    if (nameSelectTrackingPlan) {
+      let { success, data, error } = await DBService.fetchData(
+        `trackingplans/${nameSelectTrackingPlan}/`
+      );
+
+      if (success) {
+        console.log(JSON.stringify(data));
+        setTrackingPlan(data);
+        updateVisibleEventsList(data);
+        message = "Done!";
+      } else {
+        message = "An error occurred while fetching the tracking plan:";
+      }
+    } else {
+      message = "Tracking Plan option cannot be an empty value";
     }
+    setDropdownStatus({ ...dropdownStatus, TrackingPlan: message });
+    setTimeout(() => {
+      setDropdownStatus({ ...dropdownStatus, TrackingPlan: "" });
+    }, 1500);
+  };
+
+  const handleAddEvent = (nameSelectedEvent) => {
+    let message = "";
+
+    const eventToAdd = eventsList.find(
+      (event) => event.name === nameSelectedEvent
+    );
+
+    // Check if the event with nameSelectedEvent exists in visibleEventList
+    const isEventPresent = visibleEventList.some(
+      (event) => event.name === nameSelectedEvent
+    );
+
+    setvisibleEventList((prevList) => {
+      if (isEventPresent) {
+        // Replace the existing event with the new one
+        message = "Already present in the list";
+        return prevList.map((event) =>
+          event.name === nameSelectedEvent ? eventToAdd : event
+        );
+      } else {
+        // Add the new event to the list
+        message = "Done!";
+        return [...prevList, eventToAdd];
+      }
+    });
+
+    // Update the dropdown status and clear it after 1.5 seconds.
+    setDropdownStatus({ ...dropdownStatus, event: message });
+    setTimeout(() => {
+      setDropdownStatus((prevStatus) => ({ ...prevStatus, event: "" }));
+    }, 1500);
   };
 
   useEffect(() => {
@@ -156,6 +184,10 @@ const Events = () => {
     setSource(trackingPlan.source);
   }, []);
 
+  // const handleEventList = (event)=>{
+  //   if(checkAllList(event) && )
+  // }
+
   const ValidateEvent = (obj) => {
     const ajv = new Ajv();
 
@@ -174,10 +206,8 @@ const Events = () => {
       return true;
     }
   };
-  const handleSubmit = async () => {
-    let valid = true;
-    let eventsToAdd = [...addedEvents];
 
+  const handleValidation = () => {
     if (Object.keys(event).length !== 0) {
       try {
         const parsedRule = JSON.parse(event.rules);
@@ -187,9 +217,32 @@ const Events = () => {
           ...eventSubmitErrors,
           ["json"]: "Invalid JSON in rules field",
         });
+        return false;
       }
-      console.log(JSON.stringify(event));
-      if (ValidateEvent(event.rules)) {
+      return ValidateEvent(event.rules) ? true : false;
+    }
+  };
+  const addToList = (eventToAdd) => {
+    const isEventPresent = visibleEventList.some(
+      (event) => event.name === eventToAdd.name
+    );
+
+    setvisibleEventList((prevList) => {
+      if (isEventPresent) {
+        // Replace the existing event with the new one
+        return prevList.map((event) =>
+          event.name === eventToAdd.name ? eventToAdd : event
+        );
+      } else {
+        // Add the new event to the list
+        return [...prevList, eventToAdd];
+      }
+    });
+  };
+  const handleCreateEvent = async () => {
+    let validEvent = handleValidation(event);
+    if (validEvent) {
+      try {
         const { success, error, message } = await DBService.saveEventToDB(
           event
         );
@@ -198,53 +251,63 @@ const Events = () => {
           setTimeout(() => {
             setStatusMessage("");
           }, 1500);
-          setAllEventsList([...eventsList, event]);
-          eventsToAdd.push(event); // Add the event only if it's not empty and valid
-          setAddedEvents(eventsToAdd);
+
+          addToList(event);
+
           setEvent({}); // Clear the form if needed
+
           setEventFormShow(false);
-        } else {
-          seteventSubmitErrors({
-            ...eventSubmitErrors,
-            ["APIError"]: "Failed to process event: " + error,
-          });
-          valid = false;
         }
-      } else {
+      } catch (error) {
         seteventSubmitErrors({
           ...eventSubmitErrors,
-          ["json"]: "Event Validation Failed",
+          ["APIError"]: "Failed to process event: " + error,
         });
-        valid = false;
       }
+    } else {
+      seteventSubmitErrors({
+        ...eventSubmitErrors,
+        ["APIError"]: "Cannot save. Try again later",
+      });
     }
-    if (valid) {
-      if (trackingPlan.name) {
-        const trackingPlanToSave = {
-          ...trackingPlan,
-          rules: { events: eventsToAdd },
-          source: source,
-        };
-        const { success, error } = await DBService.saveTrackingPlanToDB(
-          trackingPlanToSave
-        );
-        if (success) {
-          setTrackingPlanFormStatus(success);
-          setTimeout(() => {
-            setTrackingPlanFormStatus("");
-          }, 1500);
-        } else {
-          setTrackingPlanFormStatus(error);
-          setTimeout(() => {
-            setTrackingPlanFormStatus("");
-          }, 1500);
-        }
-      } else if (trackingPlan.description && !trackingPlan.name) {
-        trackingPlanNameRef.current.focus();
-        setTrackingPlanFormStatus(
-          "Name should not be empty. It is a required field."
-        );
+  };
+
+  const handleSubmitTrackingPlan = async () => {
+    let valid = true;
+    let eventsToAdd = [...visibleEventList];
+
+    if (trackingPlan.name) {
+      const trackingPlanToSave = {
+        ...trackingPlan,
+        rules: { events: eventsToAdd },
+        source: source,
+      };
+      const { success, error } = await DBService.saveTrackingPlanToDB(
+        trackingPlanToSave
+      );
+      if (success) {
+        setTrackingPlanFormStatus(success);
+        setTrackingPlan({
+          name: "",
+          description: "",
+          events: [],
+          source: "",
+        });
+        setvisibleEventList({});
+        setTimeout(() => {
+          setTrackingPlanFormStatus("");
+        }, 1500);
+      } else {
+        setTrackingPlanFormStatus(error);
+        setTimeout(() => {
+          setTrackingPlanFormStatus("");
+        }, 1500);
       }
+    } else if (trackingPlan.description && !trackingPlan.name) {
+      trackingPlanNameRef.current.focus();
+      setTrackingPlanFormStatus(
+        "Name should not be empty. It is a required field."
+      );
     }
   };
 
@@ -271,24 +334,16 @@ const Events = () => {
       <label className="block text-left text-base font-bold mb-4">
         Add Tracking Plan
       </label>
+      {/* TODO: Merge these 2 components */}
       <TrackingPlan
         trackingPlan={trackingPlan}
         onChange={handleTrackinPlanChange}
         error={trackingPlanFormStatus}
         trackinPlanNameRef={trackingPlanNameRef}
+        onNameChange={handleAddTrackingPlan}
+        statusDropdown={dropdownStatus.TrackingPlan}
+        trackingplans={AllTrackingPlanList}
       />
-      <div className="flex justify-center p-2 gap-5">
-        <DropdownListTrackingPlan
-          trackingplans={AllTrackingPlanList}
-          onChange={handleTrackingDropdownChange}
-        />
-        <button
-          className=" bg-indigo-600 text-white text-xs p-1 rounded"
-          onClick={handleAddTrackingPlan}
-        >
-          Add Tracking Plan
-        </button>
-      </div>
 
       <div className="border border-t-black w-full my-2"></div>
 
@@ -297,18 +352,13 @@ const Events = () => {
       <div className="flex justify-center p-2 gap-5">
         <DropdownList
           events={eventsList}
-          onChange={handleEventDropdownChange}
+          onButtonClick={handleAddEvent}
+          status={dropdownStatus.event}
         />
-        <button
-          className=" bg-indigo-600 text-white text-xs p-1 rounded"
-          onClick={handleAddEvent}
-        >
-          Select Event
-        </button>
       </div>
-      {trackingPlan.name ? (
+      {trackingPlan.name || visibleEventList.length ? (
         <EventList
-          events={addedEvents}
+          events={visibleEventList}
           onDelete={handleDeleteEvent}
           onEdit={handleEditEvent}
         />
@@ -350,7 +400,7 @@ const Events = () => {
             onChange={handleEventChange}
             error={eventSubmitErrors}
             statusMessage={statusMessage}
-            onSubmit={handleSubmit}
+            onSubmit={handleCreateEvent}
           />
         </div>
       ) : (
@@ -361,7 +411,7 @@ const Events = () => {
             </label>
           )}
           <button
-            onClick={handleSubmit}
+            onClick={handleSubmitTrackingPlan}
             className="p-2 my-6 w-3/12 bg-green-500 mx-auto text-white text-xs rounded"
           >
             Save Tracking Plan

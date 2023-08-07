@@ -5,7 +5,7 @@ import Event from "./Components/Event";
 
 function App() {
   return (
-    <div className="border border-gray-500 w-6/12 my-5 mx-auto">
+    <div className="border border-gray-500 w-9/12 my-5 mx-auto">
       <Event />
     </div>
   );
