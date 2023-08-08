@@ -17,13 +17,14 @@ Using local virtal environment:
 3. Activate virtual environment: source alps/bin/activate
 4. Start Backend:
    A. cd backend
-   B. run pip install -r requirements.txt
-   C. run python manage.py runserver
-   D. server is running at http://localhost:8000/
+   B. run pip install --upgrade pip
+   C. run pip install -r requirements.txt
+   D. run python manage.py runserver
+   E. server is running at http://localhost:8000/
 6. Start frontend
    A. cd frontend
    B. npm install
    C. npm start
    D. server is running at http://localhost:3000/
 
-Now the app is running at http://localhost:3000/
+   Now the app is running at http://localhost:3000/
