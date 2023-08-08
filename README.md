@@ -16,7 +16,7 @@ Using local virtal environment:
 * Create virtal environment: python3 -m venv alps
 * Activate virtual environment: source alps/bin/activate
 
-* Start Backend:
+* Start Backend
 ** cd backend
 ** run pip install --upgrade pip
 ** run pip install -r requirements.txt
