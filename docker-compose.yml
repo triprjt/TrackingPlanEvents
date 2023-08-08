@@ -11,7 +11,7 @@ services:
     build:
       context: ./frontend
     volumes:
-      - react_build:/frontend
+      - react_build:/frontend/build
   nginx:
     image: nginx:latest
     ports:
