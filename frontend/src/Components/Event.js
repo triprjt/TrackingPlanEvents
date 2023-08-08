@@ -50,6 +50,9 @@ const Events = () => {
   };
 
   const handleTrackinPlanChange = (key, value) => {
+    if (key === "source") {
+      setSource(value);
+    }
     setTrackingPlan({
       ...trackingPlan,
       [key]: value,
@@ -293,6 +296,7 @@ const Events = () => {
           events: [],
           source: "",
         });
+
         setvisibleEventList({});
         setTimeout(() => {
           setTrackingPlanFormStatus("");
@@ -328,13 +332,12 @@ const Events = () => {
   return (
     <div
       className="container mx-auto px-4"
-      style={{ height: "600px", overflowY: "auto" }}
+      style={{ height: "800px", width: "700px", overflowY: "auto" }}
     >
       {/* start tracking plan component */}
       <label className="block text-left text-base font-bold mb-4">
         Add Tracking Plan
       </label>
-      {/* TODO: Merge these 2 components */}
       <TrackingPlan
         trackingPlan={trackingPlan}
         onChange={handleTrackinPlanChange}
