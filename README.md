@@ -4,7 +4,7 @@ This application is built for the problem statement given here: https://rudderst
 
 Here is the process to run it locally:
 
-Using Docker:
+Using Docker(having some errors):
 
 1. git clone repo
 2. Inside the parent directory i.e. TrackingPlanEvents/, docker-compose.yml file is there
